@@ -1,0 +1,308 @@
+// AICTE Security Deposit / FDR Portal - Database Schema
+// Master PRD & Implementation PRD v2.0 Compliance
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// Statutory Domain Enums
+// ==========================================
+
+enum Role {
+  INSTITUTION_USER
+  REVIEWER
+  APPROVER
+  ADMIN
+}
+
+enum VerificationStatus {
+  NOT_SUBMITTED
+  PENDING_REVIEW
+  VERIFIED
+  DISCREPANCY_FLAGGED
+  CORRECTION_REQUESTED
+  REJECTED
+}
+
+enum LifecycleStatus {
+  DRAFT
+  ACTIVE
+  MATURING_SOON
+  MATURED
+  RENEWED
+  REPLACED
+  RELEASED
+  CLOSED
+}
+
+enum RenewalStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+}
+
+enum ReleaseStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+  COMPLETED
+}
+
+// ==========================================
+// Relational Models
+// ==========================================
+
+// 1. User Model
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  passwordHash  String
+  role          Role         @default(INSTITUTION_USER)
+  designation   String?
+  department    String?
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  createdFdrs     FDR[]                @relation("CreatedByUser")
+  documents       Document[]           @relation("UploadedByUser")
+  verifications   VerificationRecord[] @relation("ReviewedByUser")
+  renewalRequests RenewalRecord[]      @relation("SubmittedRenewal")
+  releaseRequests ReleaseRequest[]     @relation("RequestedRelease")
+  notifications   Notification[]       @relation("RecipientUser")
+  auditLogs       AuditLog[]           @relation("ActorUser")
+
+  @@index([email])
+  @@index([institutionId])
+  @@index([role])
+}
+
+// 2. Institution Model
+model Institution {
+  id              String   @id @default(cuid())
+  institutionCode String   @unique // AICTE Permanent ID (e.g. 1-10023412)
+  name            String
+  address         String?
+  city            String?
+  state           String?
+  region          String?  // Northern, Western, Southern, etc.
+  type            String?  // Government, Govt-Aided, Private-Unaided, University
+  contactEmail    String?
+  contactPhone    String?
+  principalName   String?
+  status          String   @default("ACTIVE") // ACTIVE, UNDER_REVIEW, DEFAULTER
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  users User[]
+  fdrs  FDR[]
+
+  @@index([institutionCode])
+  @@index([region])
+  @@index([status])
+}
+
+// 3. FDR Model (Fixed Deposit Receipt)
+model FDR {
+  id                 String             @id @default(cuid())
+  institutionId      String
+  institution        Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  referenceNumber    String
+  bankName           String
+  branchName         String
+  ifscCode           String?
+  accountNumber      String?
+  depositAmount      Decimal            @db.Decimal(15, 2) // Principal deposit value in INR
+  interestRate       Decimal            @default(7.0) @db.Decimal(5, 2)
+  issueDate          DateTime
+  maturityDate       DateTime
+  verificationStatus VerificationStatus @default(NOT_SUBMITTED)
+  lifecycleStatus    LifecycleStatus    @default(DRAFT)
+  jointAccount       Boolean            @default(true)
+  lienMarked         Boolean            @default(true)
+  autoRenewal        Boolean            @default(false)
+  previousFdrId      String?
+  replacementFdrId   String?
+  createdBy          String
+  creator            User               @relation("CreatedByUser", fields: [createdBy], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relations
+  documents             Document[]
+  verifications         VerificationRecord[]
+  renewalsAsPrevious    RenewalRecord[]      @relation("PreviousFdr")
+  renewalsAsReplacement RenewalRecord[]      @relation("ReplacementFdr")
+  releaseRequests       ReleaseRequest[]
+  notifications         Notification[]
+
+  @@unique([bankName, referenceNumber])
+  @@index([referenceNumber])
+  @@index([institutionId])
+  @@index([verificationStatus])
+  @@index([lifecycleStatus])
+  @@index([maturityDate])
+}
+
+// 4. Document Model
+model Document {
+  id               String   @id @default(cuid())
+  fdrId            String
+  fdr              FDR      @relation(fields: [fdrId], references: [id], onDelete: Restrict)
+  documentType     String   // FDR_CERTIFICATE, LIEN_LETTER, JOINT_MANDATE, OTHER
+  originalFilename String
+  storageKey       String   @unique
+  mimeType         String
+  size             Int
+  version          Int      @default(1)
+  checksum         String?
+  uploadedBy       String
+  uploader         User     @relation("UploadedByUser", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  uploadedAt       DateTime @default(now())
+
+  @@index([fdrId])
+  @@index([uploadedBy])
+}
+
+// 5. VerificationRecord Model
+model VerificationRecord {
+  id             String             @id @default(cuid())
+  fdrId          String
+  fdr            FDR                @relation(fields: [fdrId], references: [id], onDelete: Restrict)
+  reviewerId     String
+  reviewer       User               @relation("ReviewedByUser", fields: [reviewerId], references: [id], onDelete: Restrict)
+  result         VerificationStatus
+  source         String             // SFMS_CORE_BANKING, DIRECT_BANK_API, REGIONAL_OFFICER_REVIEW, OCR_ASSISTED
+  remarks        String?
+  verifiedFields String?            // JSON stringified verified parameters
+  verifiedAt     DateTime           @default(now())
+
+  @@index([fdrId])
+  @@index([reviewerId])
+  @@index([result])
+}
+
+// 6. RenewalRecord Model
+model RenewalRecord {
+  id               String        @id @default(cuid())
+  previousFdrId    String
+  previousFdr      FDR           @relation("PreviousFdr", fields: [previousFdrId], references: [id], onDelete: Restrict)
+  replacementFdrId String?
+  replacementFdr   FDR?          @relation("ReplacementFdr", fields: [replacementFdrId], references: [id], onDelete: Restrict)
+  submittedBy      String
+  submitter        User          @relation("SubmittedRenewal", fields: [submittedBy], references: [id], onDelete: Restrict)
+  requestType      String        @default("RENEWAL") // RENEWAL, REPLACEMENT
+  status           RenewalStatus @default(SUBMITTED)
+  proposedAmount   Decimal?      @db.Decimal(15, 2)
+  proposedMaturity DateTime?
+  newBankName      String?
+  newBranchName    String?
+  justification    String?
+  remarks          String?
+  reviewedBy       String?
+  decisionAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([previousFdrId])
+  @@index([replacementFdrId])
+  @@index([status])
+}
+
+// 7. ReleaseRequest Model
+model ReleaseRequest {
+  id              String        @id @default(cuid())
+  fdrId           String
+  fdr             FDR           @relation(fields: [fdrId], references: [id], onDelete: Restrict)
+  requestedBy     String
+  requester       User          @relation("RequestedRelease", fields: [requestedBy], references: [id], onDelete: Restrict)
+  requestType     String        @default("RELEASE") // RELEASE, REFUND
+  reason          String
+  status          ReleaseStatus @default(SUBMITTED)
+  amount          Decimal       @db.Decimal(15, 2)
+  councilOrderRef String?
+  reviewedBy      String?
+  decision        String?
+  decisionRemarks String?
+  completedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([fdrId])
+  @@index([requestedBy])
+  @@index([status])
+}
+
+// 8. Notification Model
+model Notification {
+  id             String    @id @default(cuid())
+  recipientId    String
+  recipient      User      @relation("RecipientUser", fields: [recipientId], references: [id], onDelete: Restrict)
+  fdrId          String?
+  fdr            FDR?      @relation(fields: [fdrId], references: [id], onDelete: SetNull)
+  type           String    // MATURITY_ALERT, VERIFICATION_UPDATE, RENEWAL_STATUS, RELEASE_STATUS, SYSTEM
+  thresholdDays  Int?      // 60, 30, 15, 7, etc. for maturity alerts
+  title          String
+  message        String
+  urgency        String    @default("NORMAL") // NORMAL, HIGH, URGENT
+  dueDate        DateTime?
+  sentAt         DateTime?
+  readAt         DateTime?
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+
+  @@unique([fdrId, type, thresholdDays])
+  @@index([recipientId])
+  @@index([fdrId])
+  @@index([idempotencyKey])
+}
+
+// 9. AuditLog Model
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorId       String?
+  actor         User?    @relation("ActorUser", fields: [actorId], references: [id], onDelete: SetNull)
+  actorName     String?
+  actorRole     String?
+  action        String
+  entityType    String   // FDR, Institution, Document, Verification, Renewal, Release, User
+  entityId      String
+  timestamp     DateTime @default(now())
+  changeSummary String
+  ipAddress     String?
+  metadata      String?  // JSON stringified context
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([timestamp])
+}
+
+// 10. WorkflowHistory Model
+model WorkflowHistory {
+  id             String   @id @default(cuid())
+  entityType     String   // FDR, RENEWAL, RELEASE, VERIFICATION
+  entityId       String
+  previousStatus String
+  newStatus      String
+  actorId        String?
+  actorName      String?
+  actorRole      String?
+  remarks        String?
+  timestamp      DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}
