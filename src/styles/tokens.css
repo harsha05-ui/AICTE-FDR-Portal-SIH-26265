@@ -1,0 +1,119 @@
+:root {
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', Menlo, Monaco, Consolas, monospace;
+
+  /* Brand & Core Ink */
+  --navy-950: 222 47% 11%;     /* #0f172a */
+  --navy-900: 215 28% 17%;     /* #1e293b */
+  --navy-800: 215 25% 27%;     /* #334155 */
+  --navy-700: 215 25% 35%;     /* #475569 */
+  --navy-600: 215 16% 47%;     /* #64748b */
+  --navy-500: 215 20% 65%;     /* #94a3b8 */
+  --navy-100: 215 32% 96%;     /* #f1f5f9 */
+  --navy-50: 210 40% 98%;      /* #f8fafc */
+
+  /* Neutrals (Light Mode - Reference Calibrated) */
+  --canvas: 210 40% 98%;       /* #f8fafc */
+  --canvas-subtle: 215 32% 96%;/* #f1f5f9 */
+  --surface: 0 0% 100%;        /* #ffffff */
+  --surface-raised: 0 0% 100%; /* #ffffff */
+  --surface-overlay: 0 0% 100%;
+  
+  --ink-900: 222 47% 11%;      /* #0f172a Primary Text */
+  --ink-700: 215 25% 35%;      /* #475569 Secondary Text */
+  --ink-500: 215 20% 65%;      /* #94a3b8 Muted Text */
+  --ink-400: 215 25% 82%;      /* #cbd5e1 Light Text */
+  
+  --line: 214 32% 91%;         /* #e2e8f0 Hairline Border */
+  --line-strong: 215 25% 82%;  /* #cbd5e1 Strong Border */
+  --line-subtle: 215 32% 96%;  /* #f1f5f9 Subtle Divider */
+
+  /* Semantic Status (Quiet Pastel Fills + Pure Semantic Dots) */
+  --success: 160 84% 39%;      /* #10b981 */
+  --success-subtle: 152 76% 96%;/* #ecfdf5 */
+  --success-text: 163 94% 20%;  /* #065f46 */
+  --success-border: 158 80% 90%;/* #d1fae5 */
+
+  --warning: 38 92% 50%;       /* #f59e0b */
+  --warning-subtle: 48 100% 96%;/* #fffbeb */
+  --warning-text: 28 73% 26%;   /* #92400e */
+  --warning-border: 45 93% 90%; /* #fef3c7 */
+
+  --danger: 0 84% 60%;         /* #ef4444 */
+  --danger-subtle: 0 86% 97%;  /* #fef2f2 */
+  --danger-text: 0 72% 51%;    /* #991b1b */
+  --danger-border: 0 93% 94%;  /* #fee2e2 */
+
+  --info: 217 91% 60%;         /* #3b82f6 */
+  --info-subtle: 214 100% 97%; /* #eff6ff */
+  --info-text: 224 76% 48%;    /* #1e40af */
+  --info-border: 213 94% 93%;  /* #dbeafe */
+
+  /* Brand Accents */
+  --brand-lime: 72 100% 50%;   /* #ccff00 Accent Highlight */
+  --brand-blue: 217 91% 60%;   /* #2563eb */
+
+  /* Trust Levels */
+  --trust-submitted: 215 16% 47%;
+  --trust-submitted-bg: 215 32% 96%;
+  --trust-verified: 217 91% 60%;
+  --trust-verified-bg: 214 100% 97%;
+  --trust-confirmed: 160 84% 39%;
+  --trust-confirmed-bg: 152 76% 96%;
+  --trust-simulation: 38 92% 50%;
+  --trust-simulation-bg: 48 100% 96%;
+
+  /* Deadlines & Countdowns */
+  --deadline-safe: 160 84% 39%;
+  --deadline-warning: 38 92% 50%;
+  --deadline-critical: 0 84% 60%;
+
+  /* Motion Tokens (Measured from Reference) */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  
+  --dur-instant: 90ms;
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+  --dur-page: 380ms;
+
+  /* Radii scale: 6px, 8px, 14px, 18px */
+  --radius-sm: 6px;
+  --radius-md: 8px;     /* standard control radius */
+  --radius-lg: 14px;    /* card radius */
+  --radius-xl: 18px;    /* window / modal radius */
+  --radius-full: 9999px;/* chips and pills */
+
+  /* Box Shadows (Subtle, Resting & Hover) */
+  --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --shadow-hover: 0 6px 16px -4px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-modal: 0 24px 48px -12px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.dark {
+  --canvas: 222 47% 8%;
+  --canvas-subtle: 222 47% 10%;
+  --surface: 222 47% 11%;
+  --surface-raised: 221 49% 14%;
+  --surface-overlay: 221 49% 16%;
+  --ink-900: 210 40% 98%;
+  --ink-700: 215 20% 80%;
+  --ink-500: 215 16% 60%;
+  --ink-400: 215 16% 45%;
+  --line: 215 25% 20%;
+  --line-strong: 215 25% 28%;
+  --line-subtle: 215 25% 16%;
+
+  --success-subtle: 160 50% 12%;
+  --warning-subtle: 38 60% 12%;
+  --danger-subtle: 0 50% 12%;
+  --info-subtle: 217 50% 14%;
+
+  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-hover: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15);
+}

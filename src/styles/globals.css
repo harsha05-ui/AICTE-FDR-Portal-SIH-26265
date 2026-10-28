@@ -1,0 +1,61 @@
+@import './tokens.css';
+@import './glass.css';
+@import './motion.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: hsl(var(--line));
+  }
+
+  body {
+    background-color: hsl(var(--canvas));
+    background-image: radial-gradient(circle, #cbd5e1 0.75px, transparent 0.75px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+    color: hsl(var(--ink-900));
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Focus visibility standard */
+  :focus-visible {
+    outline: 2px solid hsl(var(--navy-950));
+    outline-offset: 2px;
+  }
+}
+
+/* Numeric & currency standard: tabular figures */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* Scrollbar refinement */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--ink-500) / 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--ink-500) / 0.35);
+}
+
+/* Simulation Hatch Pattern */
+.hatch-simulation {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    rgba(217, 119, 6, 0.12) 6px,
+    rgba(217, 119, 6, 0.12) 12px
+  );
+}

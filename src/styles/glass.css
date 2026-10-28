@@ -1,0 +1,55 @@
+.glass {
+  background: hsl(var(--glass-bg));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid hsl(var(--glass-border));
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.6) inset,
+    0 1px 2px hsl(var(--glass-edge)),
+    0 8px 24px hsl(var(--glass-edge));
+}
+
+.glass--chrome {
+  background: hsl(var(--glass-bg-strong));
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  border: 1px solid hsl(var(--glass-border));
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.8) inset,
+    0 2px 8px hsl(var(--glass-edge));
+}
+
+.glass--card {
+  background: hsl(var(--glass-bg));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid hsl(var(--glass-border));
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.8) inset,
+    0 1px 3px hsl(var(--glass-edge)),
+    0 6px 18px hsl(var(--glass-edge));
+}
+
+.glass--overlay {
+  background: hsl(var(--glass-bg-strong));
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  border: 1px solid hsl(var(--glass-border));
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.8) inset,
+    0 16px 36px hsl(var(--glass-edge));
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass, .glass--chrome, .glass--card, .glass--overlay {
+    background: hsl(var(--surface));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass--chrome, .glass--card, .glass--overlay {
+    background: hsl(var(--surface));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

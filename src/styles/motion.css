@@ -1,0 +1,169 @@
+/* Functional Motion Styles per PRD Section 6 */
+
+.press-feedback {
+  transition: transform var(--dur-instant) var(--ease-standard);
+}
+.press-feedback:active {
+  transform: scale(0.985);
+}
+
+.fade-in-settle {
+  animation: settleUp var(--dur-base) var(--ease-enter) forwards;
+}
+
+@keyframes settleUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dialog-enter {
+  animation: dialogEnter var(--dur-base) var(--ease-enter) forwards;
+}
+
+@keyframes dialogEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.popover-enter {
+  animation: popoverEnter var(--dur-fast) var(--ease-enter) forwards;
+}
+
+@keyframes popoverEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-enter {
+  animation: toastSlide var(--dur-base) var(--ease-enter) forwards;
+}
+
+@keyframes toastSlide {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Skeleton shimmer: 1600ms loop, low-contrast */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--line) / 0.5) 0%,
+    hsl(var(--surface) / 0.8) 50%,
+    hsl(var(--line) / 0.5) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1600ms infinite ease-in-out;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error shake per PRD Section 7 (Validation) */
+.error-shake {
+  animation: errorShake var(--dur-slow) var(--ease-standard);
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+/* Success check pop per PRD Section 7 (Approval moment) */
+.success-pop {
+  animation: successPop var(--dur-slow) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes successPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Hatched Simulation pattern per PRD Section 6 & 7 */
+.hatch-simulation {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    hsl(var(--trust-simulation) / 0.15) 4px,
+    hsl(var(--trust-simulation) / 0.15) 8px
+  );
+}
+
+/* Card Subtle Lift (Desktop only, never dense tables) */
+@media (hover: hover) and (pointer: fine) {
+  .tilt-card {
+    transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
+  }
+  .tilt-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+}
+
+/* Page perspective transition under 400ms */
+.page-enter {
+  animation: pageFadeIn var(--dur-page) var(--ease-enter) forwards;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 90ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 90ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+  }
+
+  .skeleton-shimmer {
+    animation: none !important;
+    background: hsl(var(--line) / 0.5) !important;
+  }
+
+  .tilt-card:hover {
+    transform: none !important;
+  }
+}

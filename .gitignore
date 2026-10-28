@@ -31,3 +31,7 @@ dev.db
 # Environment variables
 .env
 
+# Large archives and uploads
+*.zip
+aicte-fdr-portal-artifacts/
+backend/uploads/

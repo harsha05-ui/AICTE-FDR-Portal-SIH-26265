@@ -1,0 +1,467 @@
+// AICTE Security Deposit / FDR Portal - Production PostgreSQL Schema
+// Target production schema with native PostgreSQL ENUMs and exact DECIMAL(15,2) precision.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  INSTITUTION_USER
+  REVIEWER
+  APPROVER
+  ADMIN
+}
+
+enum VerificationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  VERIFIED
+  DISCREPANCY
+  REJECTED
+}
+
+enum LifecycleStatus {
+  ACTIVE
+  EXPIRING
+  MATURED
+  RENEWED
+  RELEASED
+}
+
+enum RenewalStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+}
+
+enum ReleaseStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+  COMPLETED
+}
+
+enum TrustLevel {
+  SUBMITTED
+  STAFF_VERIFIED
+  BANK_CONFIRMED
+}
+
+enum LienStatus {
+  NOT_RECORDED
+  CLAIMED_BY_INSTITUTION
+  CONFIRMED_BY_STAFF
+  CONFIRMED_BY_BANK
+}
+
+enum Office {
+  REGIONAL_OFFICE
+  APPROVAL_BUREAU
+  GRIEVANCE_CELL
+  VIGILANCE_CELL
+  COMPETENT_AUTHORITY
+}
+
+enum StageStatus {
+  PENDING
+  ACTIVE
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+enum OrderType {
+  NOC
+  SANCTION_ORDER
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  passwordHash  String
+  role          Role         @default(INSTITUTION_USER)
+  designation   String?
+  department    String?
+  office        Office?
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  createdFdrs     FDR[]                @relation("CreatedByUser")
+  documents       Document[]           @relation("UploadedByUser")
+  verifications   VerificationRecord[] @relation("ReviewedByUser")
+  renewalRequests RenewalRecord[]      @relation("SubmittedRenewal")
+  releaseRequests ReleaseRequest[]     @relation("RequestedRelease")
+  notifications   Notification[]       @relation("RecipientUser")
+  auditLogs       AuditLog[]           @relation("ActorUser")
+
+  @@index([email])
+  @@index([institutionId])
+  @@index([role])
+}
+
+model Institution {
+  id              String   @id @default(cuid())
+  institutionCode String   @unique
+  name            String
+  address         String?
+  city            String?
+  state           String?
+  region          String?
+  type            String?
+  contactEmail    String?
+  contactPhone    String?
+  principalName   String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users User[]
+  fdrs  FDR[]
+  holds Hold[]
+
+  @@index([institutionCode])
+  @@index([region])
+  @@index([status])
+}
+
+model FDR {
+  id                 String             @id @default(cuid())
+  institutionId      String
+  institution        Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  referenceNumber    String
+  bankName           String
+  branchName         String
+  ifscCode           String?
+  accountNumber      String?
+  depositAmount      Decimal            @db.Decimal(15, 2)
+  interestRate       Decimal            @default(7.0) @db.Decimal(5, 2)
+  instrumentType     String             @default("FDR")
+  issueDate          DateTime
+  maturityDate       DateTime
+  verificationStatus VerificationStatus @default(DRAFT)
+  lifecycleStatus    LifecycleStatus    @default(ACTIVE)
+  riskLevel          String             @default("LOW")
+  flags              String             @default("[]")
+  trustLevel         TrustLevel         @default(SUBMITTED)
+  trustSimulated     Boolean            @default(false)
+  lienStatus         LienStatus         @default(NOT_RECORDED)
+  lienNote           String?
+  beneficiaryName    String?            @default("Member Secretary, AICTE")
+  lienConfirmedById  String?
+  lienConfirmedAt    DateTime?
+  jointAccount       Boolean            @default(true)
+  lienMarked         Boolean            @default(true)
+  autoRenewal        Boolean            @default(false)
+  previousFdrId      String?
+  replacementFdrId   String?
+  createdBy          String
+  creator            User               @relation("CreatedByUser", fields: [createdBy], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  documents             Document[]
+  verifications         VerificationRecord[]
+  renewalsAsPrevious    RenewalRecord[]      @relation("PreviousFdr")
+  renewalsAsReplacement RenewalRecord[]      @relation("ReplacementFdr")
+  releaseRequests       ReleaseRequest[]
+  notifications         Notification[]
+  preSubmissionChecks   PreSubmissionCheck[]
+  bankReceipts          BankReceipt[]
+
+  @@unique([bankName, referenceNumber])
+  @@index([referenceNumber])
+  @@index([institutionId])
+  @@index([verificationStatus])
+  @@index([lifecycleStatus])
+  @@index([maturityDate])
+}
+
+model Document {
+  id               String              @id @default(cuid())
+  fdrId            String
+  fdr              FDR                 @relation(fields: [fdrId], references: [id], onDelete: Restrict)
+  documentType     String
+  slotType         String?
+  originalFilename String
+  storageKey       String              @unique
+  mimeType         String
+  size             Int
+  version          Int                 @default(1)
+  checksum         String?
+  iv               String?
+  authTag          String?
+  uploadedBy       String
+  uploader         User                @relation("UploadedByUser", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  uploadedAt       DateTime            @default(now())
+  extraction       DocumentExtraction?
+
+  @@index([fdrId])
+  @@index([uploadedBy])
+}
+
+model DocumentExtraction {
+  id              String   @id @default(cuid())
+  documentId      String   @unique
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  method          String   // TEXT_LAYER | OCR
+  extractedFields Json
+  confidence      Float    @default(1.0)
+  status          String   @default("PENDING") // PENDING | DONE | FAILED
+  errorMessage    String?
+  fileSha256      String
+  rawText         String?
+  extractedAt     DateTime @default(now())
+
+  @@index([documentId])
+  @@index([status])
+}
+
+model PreSubmissionCheck {
+  id           String   @id @default(cuid())
+  instrumentId String
+  instrument   FDR      @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  checkType    String   // DOCUMENT_SLOTS | EXTRACTION | FIELD_MATCH | BANK_RECEIPT
+  field        String
+  status       String   // MATCH | MISMATCH | NOT_FOUND | PASSED | FAILED
+  details      Json?
+  simulated    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([instrumentId])
+  @@index([checkType])
+  @@index([status])
+}
+
+model BankReceipt {
+  id            String   @id @default(cuid())
+  instrumentId  String
+  instrument    FDR      @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  receiptRef    String
+  source        String   // LIVE | MOCK | MANUAL_LETTER
+  simulated     Boolean  @default(false)
+  payloadSha256 String
+  payload       Json
+  status        String   // CONFIRMED | NOT_FOUND | MISMATCH | NOT_INTEGRATED
+  receivedAt    DateTime @default(now())
+
+  @@index([instrumentId])
+  @@index([receiptRef])
+  @@index([status])
+}
+
+model VerificationRecord {
+  id             String             @id @default(cuid())
+  fdrId          String
+  fdr            FDR                @relation(fields: [fdrId], references: [id], onDelete: Restrict)
+  reviewerId     String
+  reviewer       User               @relation("ReviewedByUser", fields: [reviewerId], references: [id], onDelete: Restrict)
+  result         VerificationStatus
+  source         String
+  remarks        String?
+  verifiedFields String?
+  verifiedAt     DateTime           @default(now())
+
+  @@index([fdrId])
+  @@index([reviewerId])
+  @@index([result])
+}
+
+model RenewalRecord {
+  id               String        @id @default(cuid())
+  previousFdrId    String
+  previousFdr      FDR           @relation("PreviousFdr", fields: [previousFdrId], references: [id], onDelete: Restrict)
+  replacementFdrId String?
+  replacementFdr   FDR?          @relation("ReplacementFdr", fields: [replacementFdrId], references: [id], onDelete: Restrict)
+  submittedBy      String
+  submitter        User          @relation("SubmittedRenewal", fields: [submittedBy], references: [id], onDelete: Restrict)
+  type             String        @default("RENEWAL")
+  status           RenewalStatus @default(SUBMITTED)
+  proposedAmount   Decimal?      @db.Decimal(15, 2)
+  proposedMaturity DateTime?
+  newBankName      String?
+  newBranchName    String?
+  justification    String?
+  remarks          String?
+  reviewedBy       String?
+  decisionAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([previousFdrId])
+  @@index([replacementFdrId])
+  @@index([status])
+}
+
+model ReleaseRequest {
+  id              String        @id @default(cuid())
+  fdrId           String
+  fdr             FDR           @relation(fields: [fdrId], references: [id], onDelete: Restrict)
+  requestedBy     String
+  requester       User          @relation("RequestedRelease", fields: [requestedBy], references: [id], onDelete: Restrict)
+  requestType     String        @default("RELEASE")
+  reason          String
+  status          ReleaseStatus @default(SUBMITTED)
+  amount          Decimal       @db.Decimal(15, 2)
+  councilOrderRef String?
+  reviewedBy      String?
+  decision        String?
+  decisionRemarks String?
+  completedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  stages          ReleaseStage[]
+  issuedOrder     IssuedOrder?
+
+  @@index([fdrId])
+  @@index([requestedBy])
+  @@index([status])
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation("RecipientUser", fields: [userId], references: [id], onDelete: Restrict)
+  fdrId          String?
+  fdr            FDR?      @relation(fields: [fdrId], references: [id], onDelete: SetNull)
+  type           String
+  thresholdDays  Int?
+  title          String
+  message        String
+  urgency        String    @default("NORMAL")
+  dueDate        DateTime?
+  sentAt         DateTime?
+  readAt         DateTime?
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+
+  @@unique([fdrId, type, thresholdDays, userId])
+  @@index([userId])
+  @@index([fdrId])
+  @@index([idempotencyKey])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorId       String?
+  actor         User?    @relation("ActorUser", fields: [actorId], references: [id], onDelete: SetNull)
+  actorName     String?
+  actorRole     String?
+  action        String
+  entityType    String
+  entityId      String
+  timestamp     DateTime @default(now())
+  changeSummary String
+  ipAddress     String?
+  metadata      String?
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([timestamp])
+}
+
+model WorkflowHistory {
+  id             String   @id @default(cuid())
+  entityType     String
+  entityId       String
+  previousStatus String
+  newStatus      String
+  actorId        String?
+  actorName      String?
+  actorRole      String?
+  remarks        String?
+  timestamp      DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}
+
+model BankSimulationRecord {
+  id              String   @id @default(cuid())
+  bankName        String
+  referenceNumber String
+  accountNumber   String?
+  depositAmount   Decimal  @db.Decimal(15, 2)
+  status          String   @default("CONFIRMED")
+  lienMarked      Boolean  @default(true)
+  beneficiaryName String   @default("Member Secretary, AICTE")
+  createdAt       DateTime @default(now())
+
+  @@unique([bankName, referenceNumber])
+}
+
+model Setting {
+  key         String   @id @unique
+  value       Json
+  description String?
+  isSample    Boolean  @default(true)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model ReleaseStage {
+  id               String         @id @default(cuid())
+  releaseRequestId String
+  releaseRequest   ReleaseRequest @relation(fields: [releaseRequestId], references: [id], onDelete: Cascade)
+  office           Office
+  order            Int
+  assignedTo       String?
+  status           StageStatus    @default(PENDING)
+  remarks          String?
+  dueAt            DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  actionById       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([releaseRequestId])
+  @@index([office])
+  @@index([status])
+}
+
+model Hold {
+  id            String      @id @default(cuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  reason        String
+  sourceBody    String
+  referenceNo   String
+  active        Boolean     @default(true)
+  placedBy      String
+  placedAt      DateTime    @default(now())
+  clearedBy     String?
+  clearedAt     DateTime?
+  clearRemarks  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([institutionId])
+  @@index([active])
+}
+
+model IssuedOrder {
+  id               String         @id @default(cuid())
+  releaseRequestId String         @unique
+  releaseRequest   ReleaseRequest @relation(fields: [releaseRequestId], references: [id], onDelete: Restrict)
+  type             OrderType
+  referenceNo      String         @unique
+  filePath         String
+  issuedBy         String
+  issuedAt         DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+}
+
+
